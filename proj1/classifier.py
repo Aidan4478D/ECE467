@@ -4,13 +4,8 @@ import numpy as np
 import string
 import json
 
-# nl.download()
 
-sentence = "hello my name is bob"
 
-# using punkt_tab tokenizer
-# tokens = nl.word_tokenize(sentence)
-# print(tokens)
 
 # Read the file into a DataFrame
 df = pd.read_csv('TC_provided/corpus1_train.labels', delimiter=' ')
@@ -18,6 +13,7 @@ df = pd.read_csv('TC_provided/corpus1_train.labels', delimiter=' ')
 classifiers = {}
 total_documents = 0
 
+# get classifiers, their instances, and the total documents
 for c in df[df.columns[1]]:
     if c not in classifiers:
         classifiers[c] = {'instances': 1, 'tokens': {}}
@@ -63,7 +59,7 @@ for row in df.itertuples(index=False):
 # predict category based off of training
 def predict_category(file_path) -> dict:
     
-    results: dict = {}
+    results = {}
 
     try:
         with open(file_path, 'r') as file:
@@ -78,10 +74,11 @@ def predict_category(file_path) -> dict:
                     if token in classifiers[c]['tokens']:
                         results[c] += np.log(classifiers[c]['tokens'][token] / classifiers[c]['instances'])
                     else:
-                        results[c] += np.log(0.000001)
+                        # could try different smoothing methods
+                        results[c] += np.log(0.001)
 
     except FileNotFoundError:
-        print(f"file {article[1:]} not found.")
+        print(f"file at {article[1:]} not found.")
         return
 
     return results
@@ -92,28 +89,90 @@ def predict_category(file_path) -> dict:
 final_results = {}
 df = pd.read_csv('TC_provided/corpus1_test.labels', delimiter=' ')
 
+# Predict and store results
 for row in df.itertuples(index=False):
     article = row[0]
     correct_classifier = row[1]
     
+    # Get predicted classifier
     category_scores = predict_category('TC_provided' + article[1:])
     predicted_classifier = max(category_scores, key=category_scores.get)
-    # final_results[article] = predicted_classifier
 
+    # Store prediction results in the dictionary
     if correct_classifier not in final_results:
-        final_results[correct_classifier] = {'instances': 1, 'correct': 0}
-    else:
-        final_results[correct_classifier]['instances'] += 1
+        final_results[correct_classifier] = {}
+    
+    if predicted_classifier not in final_results[correct_classifier]:
+        final_results[correct_classifier][predicted_classifier] = 0
 
-
-    if(predicted_classifier == correct_classifier):
-        final_results[correct_classifier]['correct'] += 1
-
+    final_results[correct_classifier][predicted_classifier] += 1
 
 # print(final_results)
 
-total_correct = sum([class_result['correct'] for class_result in final_results.values()])
-total_instances = sum([class_result['instances'] for class_result in final_results.values()])
 
-print(total_correct / total_instances)
+# fill contingency table based off final results
+categories = list(classifiers.keys())
+contingency_table = pd.DataFrame(0, index=categories, columns=categories)
+
+for true_label, predictions in final_results.items():
+    for predicted_label, count in predictions.items():
+        contingency_table.at[true_label, predicted_label] += count
+
+
+# calculate precision and recall
+precision = {}
+recall = {}
+
+total_correct = 0
+total_incorrect = 0
+
+for c in categories:
+
+    A = contingency_table.at[c, c]
+    total_correct += A
+    
+    A_B = contingency_table.loc[c].sum()
+    A_C = contingency_table[c].sum()
+
+    total_incorrect += A_B - A
+    
+    # calculate precision while accounting for div by 0
+    if A_B > 0:
+        precision[c] = round(A / A_B, 2)
+    else:
+        precision[c] = 0.0
+    
+    # calculate recall while accoting for div by 0
+    if A_C > 0:
+        recall[c] = round(A / A_C, 2)
+    else:
+        recall[c] = 0.0
+
+
+# Convert the main part of the contingency table to integers
+contingency_table.iloc[:, :-1] = contingency_table.iloc[:, :-1].astype(int)
+
+# Add Precision and Recall to the contingency table
+contingency_table['PRE'] = pd.Series(precision)
+contingency_table.loc['REC'] = pd.Series(recall)
+
+ratio = 0
+if total_incorrect + total_correct > 0:
+    ratio = round(total_correct/(total_incorrect + total_correct), 3)
+
+print(f'\n{total_correct} CORRECT, {total_incorrect} INCORRECT, RATIO = {ratio}\n')
+
+print("CONTINGENCY TABLE")
+print(str(contingency_table) + '\n')
+
+for c in categories:
+    precision_val = contingency_table.at[c, 'PRE']
+    recall_val = contingency_table.at['REC', c]
+    
+    if (precision_val + recall_val) > 0:
+        f1 = 2 * precision_val * recall_val / (precision_val + recall_val)
+    else:
+        f1 = 0.0
+
+    print(f'F1 ({c}) = {round(f1, 3)}')
 
