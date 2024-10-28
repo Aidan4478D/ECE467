@@ -18,6 +18,26 @@
         - general goal is to predict the current, or center word based on context words
     - how are SGNS more efficent using negative sampling rather than using a neural network
         - Instead of calculating probabilities for every word in the vocabulary, SGNS only updates the weights for a few randomly selected negative samples.
+    - values at hidden layers and output nodes are changing but weight matrices are not
+        - weights change during training but NOT DURING FORWARD INFERENCE
+    - how does the two-pass algorithm for training weights in RNNs work
+        - first perform forward inference, computing all the h and y values at every time step
+        - second "process sequence in reverse" computing the required error terms and gradient
+    - RNNs are not limited to a fixed number of prior words when predicting the next word
+        - all the words in the sequence so far can affect the prediction of the next word, in theory
+    - how do named entity recognition systems work?
+        - B = begin and tokens labeled B begin the name of an entity
+        - I = inside and tokens labeled I continue the name of a named entity
+        - O = outsude and tokens labeled O are not part of a named entity
+    - end-to-end training = all parts of the system are trained at once, based on training examples
+        - used in training stacked RNNs
+        - using SGD and backpropagation
+    - what is the vanishing gradient problem and how can it be mitigated
+        - multiplication typically reduces the gradients, thus, the further back we go the "less significant" the layers "seem to be"
+        - can use ReLUs as an activation function (for CNNs and FF NNs but doesn't really work for RNNs)
+        - leads to only very "local" context being "significant"
+    - it is the hidden state, not the cell state, that also potentially serves as the output of the cell
+
 
 ## slide deck 1
 
@@ -253,3 +273,182 @@
         - ex. how well we can predict nearby words
     - extrinsic evaluation = evaluated on techniques that use it for complex tasks to evalute word embeddings
         - ex. text categorization, machine translation, question answering, etc.
+
+
+## slide deck 3 - RNNs & LSTMs
+
+- recurrent neural network (RNN)
+    - any network that contains a cycle within its network connections
+    - simple RNN has a single hidden layer with outputs that lead back to its inputs = recurrent link
+    - layers can be vectors and weights between layers can be matrices
+    - output of one hidden layer (recurrent one) also goes to every other hidden layer node
+    - activation value of the hidden layer depends on current input as well as activation value of hidden layer from previous time step
+
+    - the recurrent link layer (h at time i - 1) has it's own weight matrix U
+    - thus, h(t) = g(U * h(t(i - 1)) + W * x(t) + b(h))
+            y(t) = f(V * h(t) + b(y))
+
+            where g is an activation function and f is something like a softmax layer
+            b are bias terms/weights
+
+    - common to depict an RNN as unrolled
+        - each time step is drawn seperately and each hidden layer and output layer is drawn seperately
+        - values at hidden layers and output nodes are changing but weight matrices are not
+            - weights change during training but NOT DURING FORWARD INFERENCE
+
+- forward inference / forward propagation
+    - similar to forward propagation in a NN
+        - with a FF NN, all the input is fed to the NN at once
+        - with an RNN a series or sequence of inputs is fed to the NN across multiple time steps
+    - values of hidden nodes and output nodes change at each time step (h and y change)
+    - values of weights DO NOT chance
+
+- training an RNN
+    - can train a simple RNN usid SGD and backpropagation
+    - need a training set and need to define a loss function
+
+    - for simple RNN, use three sets of weights to update
+        - W represents weights betwene input and hidden layer
+        - V represents weights between the hidden and output layer
+        - U represents the weights between the output of the hidden layer (at one time step) to the input of the hidden layer (at the next time step)
+        - might also include bias weights that also need to be udpated
+
+    - z(i) typically refers to the weighted sum of the inputs to layer i
+    - a(i) typically refers to the activation value from a layer i which applies activation value to z
+
+    - to update V, need to compute the gradient of the loss L w.r.t V using the chain rule
+    
+    - pretty much just define error terms to compute dL/dV, dL/dW, and dL/dU
+    - two pass weight training:
+        - first perform forward inference, computing all the h and y values at every time step
+        - secod "process the sequence in reverse" computing the error terms and gradients
+        - gradients during the backward pass are accumulated and the sum is used to adjust the weights
+        - type of training is sometimes called backpropagation through time
+
+- recurrent neural language models (RNLM)
+    - can use a simple RNN as a RNLM
+    - previous hidden state and current word are used to calculate the current hidden state
+    - current hidden state is fed to a softmax which created prob distribution to predict the next word
+    - then combine probabilities to evaluate the model
+
+    - RNNs are not limited to a fixed number of prior words when predicting the next word
+        - all the words in the sequence so far can affect the prediction of the next word, in theory
+
+- autoregressive generation
+    - automatically generates random text
+    - once a simple RNN is trained as a RNLM, can apply it to generate random text
+        - the probabilties of each possible next word are used to randomly choose a word
+        - inputs are pre-trained word embeddings
+        - hidden state can be interpreted as a semantic representation of all content that has been processed so far
+        - processing ends either after a fixed # of tokens or end of sentence </s> marker
+
+- sequence labeling
+    - refers to any task that involves categorizing every item in a sequence
+    - one exmaple is part of speech (POS) tagging
+    - pretrained word embeddings are inputs and a softmax layer provides prob distribution over POS tags as output at each time step
+
+- named entity recognition (NER) 
+    - involves detecting spans of text representing names of people, places, organization, etc.
+    - can also include additional concepts such as times, dates, domain specific entities, etc.
+    - sometimes the first phase of other tasks like information extraction
+    - systems are typically trained using supervised machine learning
+    - words in training set are labeled with BIO tags
+        - B = begin and tokens labeled B begin the name of an entity
+        - I = inside and tokens labeled I continue the name of a named entity
+        - O = outsude and tokens labeled O are not part of a named entity
+
+- text categorization
+    - RNNs have mostly been successfuly for caregorizing short sequences of text like tweets or individual sentence 
+        - could also be applied to longer documents
+    - common approach is to have the final hidden state become the input to a FF neural net
+    - end-to-end training = all parts of the system are trained at once, based on training examples
+
+- stacked RNNs
+    - stacked RNN uses the hidden states produced by one RNN as the inputs to the next
+    - can refer to each RNN as a 'layer'
+    - the final RNN in the stack produces the final output for the stack
+    - the hidden states of the top layer can be used as outputs of the stack
+        - can be sent as input to another type of layer such as a softmax layer
+    - stacked RNNs outperform single-layer RNNs for many tasks
+    - optimal number of RNN layers varies according to the task and the training set
+    - the entire stack is trained at once using end-to-end training
+
+- bidirectional RNNs
+    - if all input is available at once, we can create another RNN that process the inputs in the opposite or backward direction
+    - combining the two RNNs (forward and backward) results in a bidirectional RNN (Bi-RNN or BRNN)
+    - at each time step, it is typical to concat the hidden states from each direction although other methods of combining them are possible
+
+    - when a BRNN is used for text categorization, typically only the final states produced by the forward and backward RNNs are concated then fed to a FF NN
+    - it's also possible to use a stacked bidirectional RNN
+
+    - seperate models are trained in the forward and backward directions with the output of each model at each time point concatenated to represent the bidirectional state at that time point
+
+- vanishing gradient problem
+    - during backpropagation, for each layer or time step that the error is propagated there is a multiplication that takes place
+    - multiplication typically reduces the gradients, thus, the further back we go the "less significant" the layers "seem to be"
+        - in terms of how they affect the measured loss during training
+    - ReLUs mitigate the problem to some extent but are not used for RNNs
+    - there also exists the exploding gradient problem which is when multiplication INCREASES gradients
+        - capping gradient to some fixed max provides an adequate solution to the exploding gradient problem
+    - there is no simple solution to the vanishing gradient problem
+    
+    - leads to only very "local" context being "significant"
+    - in a simple RNN, hidden states are only significantly influenced by previous 2 or 3 words
+
+- Long Short-Term Memory Units (LSTMs)
+    - provide one solution for mitigating the vanishing gradient problem
+    - often the network as a whole, or each layer of a stacked network is referred to as an LSTM
+    - common to depict LSTMs graphically in terms of cells
+        - such depictions show the LSTM unrolled - cell is the guy that repeats
+
+    - cells have two sets of values that are passed between other cells
+        - really being passed as feedback between one time step and the next
+        - one set of values is typically referred to as the cell state (cell context)
+        - other set of values is the cell's hidden state
+        - textbook refers to two sets of values as seperate layers of an LSTM network but that's not common usage
+
+    - certain components within the cell are typically referred to as gates
+    - forgot gate:
+        - uses previous hidden states and the current input to decide how much of (and which parts of) the cell state to forget/remember
+        - can also incorporate a bias weight into this computation
+        - gets multiplied by the cell state element-wise determining which information will be kept/forgotten
+        - use f = sigmoid(previous hidden layer * U + current input * W)
+        - then update (the forgetting) is k = c(t-1) * f(t) (where * is element wise)
+    - new cell content
+        - determines how the input, combined with previous hidden state might be used to update the cell state
+        - g = tanh(previous hidden layer * U + input * W)
+    - input gate
+        - used to decide how much of (and what parts of_ new cell content is added to the cell state
+        - i = sigmoid(previous hidden layer * U + input * W)
+        - update (the adding) is j = g(t) * i(t)
+    
+    - cell state is simply updated as c(t) = j(t) + k(t)
+    - value of the cell state will be passed out of the cell to the next time step
+
+    - output gate
+        - used to decide how much of (and which parts of) updated cell state is passed on as the hidden state from the cell
+        - formula for this is o = sigmoid(previous hidden later * U + current input * W)
+        - output gate does not get applied to cell state directly
+        - rather, it is element-wise multiplied by the result of putting the cell state through a tanh function
+            - h = o(t) * tanh(c(t))
+        - it is the hidden state, not the cell state, that also potentially serves as the output of the cell
+            - hidden state might be used to make predictions, serve as an input to another stacked LSTM, etc.
+
+    - in summary:
+        - LSTM accepts previous cell's state (context), previous cell's hidden state, and the current input (also a vector) as input
+        - cell generates an updated cell state and an updated hidden state which are passed to next cell
+        - hidden state could also serve as cell's output
+            - is visible outside of cell
+            - can be used for classification, make predictions, as input to another stacked LSTM layer, etc.
+        - gates, and process of calculating new candidate values, all ultimately involve ordinary nodes and weights in a neural net
+        - can also learn weights (aka train the LSTM) via end-to-end training using SGD and backpropagation
+
+- complex neural networks
+    - LSTMs can be bi-directional and/or stacked
+    - they can be applied to any of the previously discussed tasks
+    - outputs from recurrent structures can be fed as input to feedforward networks for categorization
+    - modern DL libraries make it relatively easy to build complex networks out of standard layers
+    - regardless of architecture, NNs can be trained end-to-end using SGD and backpropagation
+
+## slide deck 4
+
