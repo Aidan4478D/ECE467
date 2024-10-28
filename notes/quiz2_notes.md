@@ -5,6 +5,10 @@
     - in a deep neural network, is "forward propagation" just using the previous node's output as that node's input
     - can you maybe go over how a neural language model can learn word embeddings specifcally like what's going on with the input and projection layer
     - how exaclty are SGNs more computationally efficient than training skip-grams as a neural network
+    - am I right when I say like the idea of "context" is burried within the hidden states
+        - encoder-decoder network
+    - clarify what's going on in an encoder-decoder network (for MT too)
+    - clarify how does beam search work
 
 
 - predictions:
@@ -37,6 +41,14 @@
         - can use ReLUs as an activation function (for CNNs and FF NNs but doesn't really work for RNNs)
         - leads to only very "local" context being "significant"
     - it is the hidden state, not the cell state, that also potentially serves as the output of the cell
+    - how is the training data structed for machine translation
+        - training set is in the form of a parallel corpus with a source sentence and a target sentence
+        - typically for a NMT model, one sentence pair is used to train it at a time
+    - teacher forcing = during training, regardless of word decoder predicts, the actual next work from target sentence is fed to the decoder at the next time step
+    - what is greedy decoding why is it bad and how do we mitigate it
+        - been assuming that deocder applies an argmax to the output of the softmax to determine the most likely word at each time step
+        - bad as the most optimal word now to decoder may not look good in the future
+        - use something like beam search which keeps track of the k best hypotheses that are all fed into a distinct decoder and choose k best updated hypotheses to store for next time step
 
 
 ## slide deck 1
@@ -452,3 +464,124 @@
 
 ## slide deck 4
 
+- RNNs
+    - for sequence labeling each word or token gets a label: POS tagging and named enrirty recognition
+    - for text categorization, sequence of texts recieves one label
+    - in practice, variations of RNNs like LSTM networks are used
+    - such variations help to mitigate (but not completely eliminate) the vanishing gradient problem
+    - any of these variations can be bidirectional and/or stacked
+
+- sequence to sequence tasks
+    - many NLP tasks involve mapping a sequence of text to another sequence of text
+    - examples include machine translation, summarization, and question-answering
+    - will cover ecoder-decoder models (seq2seq) models that can do this
+
+    - encoder-decoder network
+        - the encoder accepts and input sequence x and generates a corresponding sequence of contextualized representations h
+            - assume the encoders are implemented using stacked Bi-LSTMs
+            - assume that the hidden states from the both directions of the top Bi-LSTM are concatenated or combined to form a context vector
+        - context vector c is a function of h and conveys the "essence" of the input to the decoder
+            - if encoder is stacked these are hidden states at the top layer
+        - the decoder accepts c as input and generates an arbitrary length sequence of hidden states h
+            - from which, a corresponding sequence of output states, y, can be obtained
+            - context vector, c, can be made available at each time step of the decoder
+
+
+- machine translation
+    - the use of computers to translate from one language to another
+    - before success of deep learning in NLP, most efforts in MT involved statistical MT
+        - based on machine learning; such approaches are trained on a training set
+    - MT is difficult as:
+        - single word can have many possible translations in target languages and differences are often subtle
+        - different words in source can have same translation in target
+        - morpological and grammatical rules differ between languages
+        - figures of speech differ
+    - training data for MT
+        - statistical machine translation relies on a training set in the form of a parallel corpus
+        - parallel corpus contains text in at least two different lanagues
+        - senteces have been aligned (either manually or automatically)
+        - original sentence is referred to as source language
+        - desired languages is referred to as the target language
+
+        - use a parallel corpus to train a neural machine translation model w/ the source and target sentences used together
+        - typically NMT models are trained using one sentence pair at a time
+
+    - encoder-decoder applied to MT
+        - encoder
+            - accepts an input sentence in source language to be translated to target language
+            - sequence may be a sequence of word embeddings or subword embeddings
+            - encoder can use any variation of RNN
+            - cells at top layer produce visible hidden states
+            - ultimately produces a context vector c which is based on the sequence of hdiden states at encoder's top layer
+            - final hidden state of encoder can serve as the context vector
+        - decoder
+            - accepts a context vector c and produces a sequence of hidden states
+            - may consider the entire context vector c in addition to the previous hidden state and previous output
+            - when system is applied for translation, the first parameter is the embedding representing the word or token generated at the previous time step
+            - output layer computes the probabilities of all possible target words based on the hidden states of the decoder
+        - training an E-D for MT
+            - to train an NMT system we use sentence-paris from a parallel corpus
+            - source sentence ending in an end-of-sentence market is applied to the encoder
+            - during training, regardless of word decoder predicts, the actual next work from target sentence is fed to the decoder at the next time step = teacher forcing
+            - when decoder is applied, the loss at each time step is based on the probability assigned to the true next word
+            - typically the loss is averaged across all output words and then the loss is backpropagated to update the decoder and encoder parameters
+            - entire system can be trained end-to-end using stochastic gradient descent and backpropagation
+
+    - problem with choosing words as we go
+        - been assuming that deocder applies an argmax to the output of the softmax to determine the most likely word at each time step
+        - would be an example of greedy decoding which is not optimal to produce the best overall sentence
+            - token that looks good to decoder now might turn out later to have been the wrong choice
+        - use beam search to improve translations
+
+    - beam search
+        - views the task of the docder as a search through the state space of possible output sequences
+        - must avoid an exponential search
+        - at each step of decoding, beam search keeps track of the k best choices (k = width ob beam)
+        - k states currently comprising the beam represent the "frontier" of the search
+        - partial paths leading to these k states can be called hypotheses
+        - each of the k hypotheses leading to states on the frontier is fed to a distinct decoder
+            - aka we are keeping track of seperate updated states of the entire neural network
+        - looking at outputs of all k softmax functions, we choose the k best updated hypotheses to store for the next time step (along with their updated full neural networks)
+        - for MT, after T time steps, the current hypotheses represent the k best output sequences so far
+        
+        - when an EOS market is generated ,the hypothesis leading to it is recorded and the size of the beam is reduced
+        - process continues until size of beam is zero
+        - at that point, we've remembered k-complete hypothesis representing a full translation
+        - based on overall probabilities (determined by softmax that predicted target workds, we can choose the best sentence)
+
+        - issue is that longer sequences tend to have lower probabilities associated with them than shorter sequences
+            - as more probabilties are being multiplied together
+            - can instead add log probabilties instead of multiplying probabilities
+            - issue can be mitigated with some sort of length normalization
+
+- evaluating MT systems 
+    - one way to rely is human judgement but that's expensive and not always feasible
+    - another way is to use a metric => BLEU
+        - compares an automatically generated translation to one or more human translations of the same source sentence to the same target language
+        - measure frequencies of all N-grams up to some specified N that overlap with at least one of the human sentences
+
+- context vector
+    - number of hidden states produced by encoder varies according to length of input sentence
+    - need a fixed-sized context vector so we can't just concatenate all of them
+    - one approach is to use only the final hidden state
+        - leads to context dominated by latter part of input
+    - another is to use Bi-RNNs and concat the final hidden states frome ach direction
+        - leads to context that is dominated by stat and end of input
+    - another is to average all the hidden states produced by encoder
+        - not usually the case that all hidden states are equally important
+
+- attention
+    - when applied to RNN-based encoder-decoder models, attention can lead to improved performance for several NLP tasks including machine translation
+    - instaed of having static context vector, a different context vector is generated at each time step of the decoder
+    - need to compute how much to focus on each encoder state / how relevent each encoder state is to the decoder state
+    - need to compute a score that represents relevancy of each encoder hidden state to previous decoder hidden state
+        - could use a dot product => dot product attention
+        - can lead to very good results for some tasks
+        - paying most attention to hidden states from encoder that are most similar to the previous hidden state from decoder
+    - another method allows the network to learn how to compare encoder hidden states to decoder hidden states
+        - weights are regular NN weights learned with all other weights during end-to-end training
+
+    - softmax function is used to normalize similarity scores
+        - sometimes tanh function is applied in practice before applying softmax
+        - taking these outputs, each represents the proportional relevence of each encoder hidden state to the prior hidden decoder state
+        - using these values we can compute the current context vector that will be used by the decoder at that step of its computation
