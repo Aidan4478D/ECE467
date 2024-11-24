@@ -5,6 +5,18 @@
 - how is multi-head attention different from normal? why do we use it?
 - why are positional encodings important? what do they tell us and why is it okay if they're only added to the input?
 - how does BERT differ from ELMo? 
+- what is BERT's first training objective 
+    - involves randomly masking some tokens and then system tries to predict them based on their context
+- what is BERT's second pre-training objective/task
+    - system learns to predict whether the second sentence is the actual follow up sentence to the first
+- why do we not replace all masked tokens with [MASK]
+    - creates a mismatch between pre-training and fine-tuning since the [MASK] token does not appear during fine tuning
+- how is BERT different than ELMo in fine-tuning?
+    - unlike ELMo, the parameters learned during pretraining are not frozen so during fine-tuning, all BERT parameters are adjusted
+- why is fine tuning preferable?
+    - less expensive to train as you just take the big ass pretrained shit and then tune it to what you need
+- what is one of the BERT subsidiaries and how does it differ from BERT?
+    - RoBERTa uses 10x more pretraining data, trains for more epochs, and gets rid of the next sentence prediction (NSP) objective
 
 ### Transformers
 
@@ -149,7 +161,7 @@ Bidirectional Encoder Representations from Transformers (BERT)
     - BERT uses only one specific architecture for many NLP tasks
         - elmo produces contextual embeddings that are fed to other architectures
 
-- tokenization
+tokenization
     - BERT implementation used WordPiece tokens
         - like BPE, the WordPiece algorithm leads to subword tokens that do not cross word boundaries
         - system considers the prediction for the word to be the label assigned to its first subword
@@ -159,8 +171,109 @@ Bidirectional Encoder Representations from Transformers (BERT)
     - both the position embeddings and the segment embeddings are learned as a part of pre-training
     - the final input embedding for teach token is the sum of the WordPiece embedding, the position embeddings, abd the segment embedding
 
-- pre-training
+pre-training
     - the developers pretrained their system for two tasks using unsupervised machine learning
     - pretrained a single transformer encoder for two seperate tasks at the same time
-        - one task = language modelling 
-    
+        - one task = language modelling task that ELMo and other systems are pretrained for
+            - it's important to use context from both the left and the right of words at the same time
+            - first training objective used for bert involves randomly masking some tokens and system tried to predict them
+            - thus BERT = masked language model and objective = masked language modeling
+        - second task = next sentence prediction (NSP)
+            - input = two concatenated sentences with a sentence separator symbol in between
+            - for training:
+                - half the time the second sentence follows the first in the training corpus
+                - other half of time the second sentence is a random sentence from the training corpus
+            - system learns to predict whether the second sentence is the actual follow up sentence to the first
+    - some later works found that NSP isn't actually that important to include as a pre-training objective
+
+    - masking procedure
+        - 15% of the WordPiece tokens from the training data, chosen randomly, are masked
+        - allows to obtain a bidirectional pre-trained model
+            - creating a mismatch between pre-training and fine-tuning since [MASK] token doesn't appear in fine tuning
+            - thus don't always replace "masked" words with [MASK] token
+        - 80% of masked tokens replaced with [MASK]
+        - 10% of masked tokens replaced with a random token
+        - 10% of masked tokens are not changed
+
+    - input
+        - consists of components concatenated together  
+        - a special token [CLS] + input embeddings from sentence 1 (wordpiece token embedding + position embedding + segment embedding)
+        - a sentence seperation token [SEP] + embeddings from sentence 2 (again adding all 3 components)
+        - again 15% of tokens are masked
+        - 50% of the time sentence 2 follows sentence 1 and the other 50% sentence 1 follows sentence 2
+        - "sentences" are actaully more general spans of text, chosen s.t. the input sequence never exceeds 512 tokens
+        - if the input sequence is shorter than 512 tokens, it must be padded (as it accepts fix-sized input)
+
+    - process
+        - training corpus consists of BookCorpus and English Wikipedia (abount 3.3 billion words in total)
+        - loss functions were computed based on the following predictions
+            - final hidden state corresponding to the [CLS] token is considered the "aggregate sequence representation for classification tasks"
+            - during pretraining, this is used for NSP objective
+            - final hidden states corresponding to masked tokens were used for the masked language modeling task
+        - original paper created two systems:
+            - BERT (base) = 12 transformer encoder layers, vectors of 768, and 12 self-attention heads (110 million trainable params)
+            - BERT (large) = 24 transformer encoder layers, vectors of 1024, and 24 self-attention heads (340 million trainable params)
+        - there's also other hyperparameters like batch size, learning rate, epochs, etc. which are described in the paper
+
+fine-tuning
+    - unlike ELMo the purpose of BERT is not to produce contextual embeddings that can be fed into other architectures
+    - the same architecture that has been used for pretraining can be **fine-tuned** for other tasks
+    - is an example of **transfer-learning**
+        - information learned for one task can also be useful for other related tasks
+        - use of static word embeddings probabily fits the definition of transfer learning
+        - term more often used when the model being used either stays the same or is slightly modified
+
+    - SQuAD = reading comprehension dataset
+        - task usually tackled is as a sequence labelling task applied to the appropriate passage
+        - instead of feeding the system sentence 1 and sentence 2, the system is fed the question and the corresponding passage or paragraph that contains (or might contain) the answer
+        - final hidden state corresponding the passage tokens are fed to two softmax layers
+            - one predicts the prob that each token is the start of the answer
+            - the other predicts the prob that each token is the end of the answer
+        - for SQuAD 2.0 the system treats answers to unanswerable questions as starting and ending at the [CLS] token
+    - for sequence labeling tasks that do not involve sentence pairs (POS tagging for ex.) the second sentence is left out
+    - unlike ELMo, the parameters learned during pretraining are not frozen
+        - during fine-tuning, all BERT parameters are adjusted
+    - compared to pre-training, fine tuning is relatively inexpensive
+
+BERT experiments
+    - the GLUE benchmark = collection of datasets related to tasks that seem to rely on natural language understanding
+        - GLUE = general language understanding evaluation
+        - a collection of diverse natural language understanding tasks
+        - there are 9 datasets that comprise the GLUE benchmark
+            - multi-genre natural language inference
+            - quora question pairs (from the site lmfao)
+            - question natural language inference
+            - the stanford sentiment treebank
+            - corpus of linguistic acceptability
+            - semantic textual similarity benchmark
+            - microsoft research paraphrase corpus
+            - recognizing textual entailment
+    - also used SQuAD dataset and SWAG (sittuations with adversarial generations dataset)
+        - SWAG contains 113k sentence-pair completion examples that evaluate grounded commonsense inference
+
+    - results
+        - for all of the 11 tasks, BERT achieved state-of-the-art results
+        - for some results it was a significant improvement over the last
+        - this was achieved with a single common architecture
+            - based on a transformer encoder BERT is pre-trained using unlabaled data for masked language modeling
+            - in the original paper for next sentence prediction
+            - same architecture is then fine-tuned using a smaller training set
+
+BERT variations
+    - RoBERTa = a robustly optimized BERT pretraining approach
+        - primarily uses the same architecture as BERT but it is pretrained differently
+            - uses about 10x as much pretraining data
+            - uses larger mini-batches
+            - trains for more epochs
+            - every few epochs it randomly geenrates masked tokens
+            - does not use next sentence prediction as pretraining objective
+        - achieved new state of the art results for everything BERT was also tested on
+    - SpanBERT
+        - masks out spans of text as opposed to individual tokens
+        - pretraining task is to predict the masked spans based on the context
+        - used the same pretraining dataset as BERT
+        - did not use the next sentence prediction as an additional training objective
+        - achieved better results than BERT on 14 of the 17 tasks
+
+### LLMs, GPT, and RLHF
+
