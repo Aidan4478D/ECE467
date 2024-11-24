@@ -35,4 +35,4 @@
         - relies solely on attention mechanisms dispensing with recurrence and convolutions entirely
         - discusses the transformer as an encoder-decoder model
 
-        ![image info](./transformer.png)
+        ![image](images/transformer.png)
