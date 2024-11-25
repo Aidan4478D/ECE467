@@ -2,9 +2,22 @@
 
 ### predicted questions:
 - what is attention related to? (as in what are the parameters for calculating it)
+    - related to queries, keys, and values - all of these are vectors and at least the queries and keys have the same dimension d(k)
+    - queries and keys are the things being compared 
+    - the values are the things being combined based on the results of the comparisons
 - how is multi-head attention different from normal? why do we use it?
+    - attention mechanisms typically learn to focus on one aspect of the input
+    - but for NLP tasks there's various aspects of the input that we need to pay attention to for different reasons
+    - use multi-head attention
+        - first queries, keys, and values are linearly projected using learned mappings
+        - next, attention is applied in parallel to each result
+        - outputs of the various attention mechanisms are then concatenated and again projected
+    - pretty much consists of several dot-product attention layers running in parallel
 - why are positional encodings important? what do they tell us and why is it okay if they're only added to the input?
+    - without these, there is no way for a transfoormer to make use of the order of the input
+    - therefore, it's necessary to inject some information about the relative or absolute position of the tokens in the sequence
 - how does BERT differ from ELMo? 
+    - based on transformers, not LSTMs (as ELMo was) to produce contextual embeddings
 - what is BERT's first training objective 
     - involves randomly masking some tokens and then system tries to predict them based on their context
 - what is BERT's second pre-training objective/task
@@ -17,10 +30,44 @@
     - less expensive to train as you just take the big ass pretrained shit and then tune it to what you need
 - what is one of the BERT subsidiaries and how does it differ from BERT?
     - RoBERTa uses 10x more pretraining data, trains for more epochs, and gets rid of the next sentence prediction (NSP) objective
+- what is a masked language model
+    - predicts tokens given context from both sides
+- what are LLM scaling laws
+    - performance is predictable to a high degree of accuracy as the number of parameters, training data, or computations used for training grows
+- what is the difference between the encoder and the decoder
+    - that decoder has an extra middle sublayer (masked mutli-head attention at top)
+- what is zero-shot performance
+    - focus is on zero-short performance = model was applied to various tasks without any fine tuning
+- what is few-shot learning
+    - method treats all tasks as autoregressive generation tasks using clever prompts
+- zero-shot learning vs few-shot learning
+    - zero-shot learning: prompts the system to perform a task
+    - one-shot learning: adds a single example to the prompt whereas few-shot adds a few examples
+- what is reinforcement learning from human feedback
+    - trained on dataset from human volunteers
+    - then train a rewarding model based on a training set consistening of actual responses and human rankings
+- what is chain of thought prompting
+    - method to elicit better reasoning for certain types of tasks from an LLM
+- how is InstructGPT different from the previous GPT models?
+    - previos GPT pretraining objective was standard language modeling on a standard, fixed dataset
+    - involves a three-step process:
+        1. fine-tune system using supervised ML 
+        2. train a rewardal model using supervised ML to predict how good a response is
+        3. use reward model and reinforcement learning to continue to fine-tune system; used proximal policy optimization (PPO)
+    - all together procedure is known as reinforcement learning from human feedback
+- what are emergent abilities
+    - abilities that the models only gain after they become large enough
+- what is explainable vs interpretable AI
+    - interpretabyle AI = understanding the inner workings of a system
+    - explainable AI = explaining predictions or decisions made by AI systems in human terms
+- strong ai vs week ai
+    - weak AI = machines can act intelligently (can be have as if they were intelligent)
+    - strong AI = machines would actually be intelligent and actually be thinking
+
 
 ### Transformers
 
-pre-transformer era
+- pre-transformer era
     - through 2017 variations of RNNs (like LSTMs) dominated NLP literature
     - input sequences would be sequences of word embeddings or subword embeddings
 
@@ -44,7 +91,7 @@ pre-transformer era
         - with enough layers CNNs can handle this in theory
             - in pracitce they don't work work well when long-distance dependencies are significant
 
-transformers
+- transformers
     - "Attention is All You Need" paper presented at 2017 conference developed by Google researchers
         - introduces a novel neural architecture called a transformer
         - relies solely on attention mechanisms dispensing with recurrence and convolutions entirely
@@ -64,7 +111,7 @@ transformers
     - attention
         - related to queries, keys, and values
             - all of these are vectors and at least the queries and keys have the same dimension d(k)
-        - queries and keys are the things beoing compared 
+        - queries and keys are the things being compared 
         - the values are the things being combined based on the results of the comparisons
         - in different contexts, two or even all three of these may be identical
         - transformer architecture in artcle uses scaled dot-product attention
@@ -154,14 +201,14 @@ transformers
 
 ### BERT and BERT variations
 
-Bidirectional Encoder Representations from Transformers (BERT)
+- Bidirectional Encoder Representations from Transformers (BERT)
     - based on transformers, not LSTMs (as ELMo was) to produce contextual embeddings
     - BERT uses only the encoder of a transformer
         - in general can be used for sequence labelling tasks and sequence classification tasks
     - BERT uses only one specific architecture for many NLP tasks
         - elmo produces contextual embeddings that are fed to other architectures
 
-tokenization
+- tokenization
     - BERT implementation used WordPiece tokens
         - like BPE, the WordPiece algorithm leads to subword tokens that do not cross word boundaries
         - system considers the prediction for the word to be the label assigned to its first subword
@@ -171,7 +218,7 @@ tokenization
     - both the position embeddings and the segment embeddings are learned as a part of pre-training
     - the final input embedding for teach token is the sum of the WordPiece embedding, the position embeddings, abd the segment embedding
 
-pre-training
+- pre-training
     - the developers pretrained their system for two tasks using unsupervised machine learning
     - pretrained a single transformer encoder for two seperate tasks at the same time
         - one task = language modelling task that ELMo and other systems are pretrained for
@@ -215,7 +262,7 @@ pre-training
             - BERT (large) = 24 transformer encoder layers, vectors of 1024, and 24 self-attention heads (340 million trainable params)
         - there's also other hyperparameters like batch size, learning rate, epochs, etc. which are described in the paper
 
-fine-tuning
+- fine-tuning
     - unlike ELMo the purpose of BERT is not to produce contextual embeddings that can be fed into other architectures
     - the same architecture that has been used for pretraining can be **fine-tuned** for other tasks
     - is an example of **transfer-learning**
@@ -235,7 +282,7 @@ fine-tuning
         - during fine-tuning, all BERT parameters are adjusted
     - compared to pre-training, fine tuning is relatively inexpensive
 
-BERT experiments
+- BERT experiments
     - the GLUE benchmark = collection of datasets related to tasks that seem to rely on natural language understanding
         - GLUE = general language understanding evaluation
         - a collection of diverse natural language understanding tasks
@@ -259,7 +306,7 @@ BERT experiments
             - in the original paper for next sentence prediction
             - same architecture is then fine-tuned using a smaller training set
 
-BERT variations
+- BERT variations
     - RoBERTa = a robustly optimized BERT pretraining approach
         - primarily uses the same architecture as BERT but it is pretrained differently
             - uses about 10x as much pretraining data
@@ -276,4 +323,185 @@ BERT variations
         - achieved better results than BERT on 14 of the 17 tasks
 
 ### LLMs, GPT, and RLHF
+
+- large language models (LLMs)
+    - language model = model that assigns a probability to a sequence of text
+    - conventionally N-grams were used for this purpose
+    - traditional language models (including neural language models) work left-to right predicting the next token in a sequence based on previous tokens
+    - can also be used to generate text one token at a time
+    - masked language models (BERT) predicts tokens given context from both sides
+    - in general are pretrained based on some corpus of unlabeled natural language text using unsupervised machine learning approaches
+    - no general agreement as to how big a language model needs to be in order to be considered a large language model
+
+    - LLMs seem to obey **scaling laws**
+    - performance is predictable to a high degree of accuracy as the number of parameters, training data, or computations used for training grows
+    - can improve performance of an LLM in a predictable way by adding more parameters, training data, or more iterations of training
+    - this is **only true** for performance as a language model
+
+    - LLMs are not as predictable as a model grows (as to how they will perform for other tasks)
+        - other abilities may face unpredictable diminsihing returns and some may even get worse
+        - there are some examples of emergent abilities
+
+- GPT-1
+    - stands for generative pre-trained transformer
+    - GPT is pretrained as a traditional language model (while bert is a masked language model)
+    - GPT is built upon transformers
+        - GPT-1 has about 117 million trainable parameters
+    - can product contextual embeddings that can be used for other downstreamd tasks
+    - built on a transformer decoder as opposed to the encoder (like BERT)
+        - difference between encoder and decoder is that decoder has a middle sublayer
+        - cross attention layer that attends to the output of the encoder
+        - in decoder-only architecture this cannot exist
+        - also self-attention layer is masked in a decoder
+    - during training GPT uses a sort of masked multi-head self-attention
+        - during pretraining the model does not look to the right
+
+
+    - pretraining
+        - consists of a 12-layer decoder-only trasnformer with masked self-attention heads
+        - 12 attention heads were used in the original paper
+        - self attention layer -> position-wise feed-forward sublayer
+        - model pretrained using the BookCorpus
+        - pretraining objective was standard language modeling (predict next token given previous token)
+        - used BPE for tokenization (vocab of around 40,000)
+        - pretrained for 100 epochs on minibatches of 64 randomly sampled contiguous sequences of 512 tokens
+
+    - fine-tuning
+        - used fine-tuning to apply the system to various downstream tasks
+        - is an example of transfer learning
+        - interesting note is that for all fine-tuning tasks, the fine-tuning includes language modeling (text prediction) as an auxillary fine-tuning objective
+
+    - downstream tasks
+        - straightforward classification tasks: input is text that needs to be classified
+        - entailment tasks: input included both sentences or sequences being compared with a delimiter in between
+        - similarity tasks: fed two sequence sbeing compared in both possible orders with a delimiter in between
+        - multiple choice tasks: QA where possible answers are the choices
+        - for all tasks, input starts and ends with special tokens and final hidden state of transformer (corresponds to the last input token) is passed to the linear layer
+
+- GPT-2
+    - introduced in 2019 by OpenAI
+    - trained as a traditional language model using an OpenAI dataset known as WebText created by scraping ~45 million links
+    - focus is on zero-short performance = model was applied to various tasks without any fine tuning
+    - GPT-2 could perform autoregressive generation of text pretty well
+
+- GPT-3
+    - introduced in 2020 again by OpenAI
+    - contains about 175 billion parameters (trainable weights)
+    - basic architecture was mostly the same as previous versions of GPT
+    - used a larger training corpus than the previous GPTs
+
+    - few-shot-learning
+        - does not involve fine tuning
+        - rather a prompt is given to GPT-3 which shows examples of a pattern representing the type of task to solve
+        - method treats all tasks as autoregressive generation tasks using clever prompts
+        - no gradient updates are performed
+    
+    - zero-shot learning: prompts the system to perform a task
+    - one-shot learning: adds a single example to the prompt whereas few-shot adds a few examples
+
+- InstructGPT (GPT 3.5)
+    - is a modified version of GPT-3 that was fine-tuned to do a better job at following instructions
+    - involves a three-step process:
+        1. fine-tune system using supervised ML 
+        2. train a rewardal model using supervised ML to predict how good a response is
+        3. use reward model and reinforcement learning to continue to fine-tune system; used proximal policy optimization (PPO)
+    - all together procedure is known as reinforcement learning from human feedback
+
+- Chain of thought prompting
+    - method to elicit better reasoning for certain types of tasks from an LLM
+    - by including a sentence such as "lets think step by step" to the end of a prompt instead of a request for the answer directly the perforamnce improves significantly
+    - causes LLM to provide an explanation to the answer that is helpful for the user
+    - can be used to improve the performance of few-shot learning
+
+- Emergent Abilities
+    - abilities that the models only gain after they become large enough
+    - few-shot learning and CoT prompting are both emergent abilities
+    - some studies found that these abilities are not present at all when tested on samller models
+
+### Ethics and Philosophy
+- ethics = branch of philosophy
+
+- problems with chatbots
+    - they can be blatantly offensive
+    - they learned to emulate sexist, racist, and blatantly offensive behavior
+    - there's issues with chatbots relating to privacy 
+        - LLM could reveal passwords that appeared in training data
+        - chatbot might revel personal/private information to a user
+    - could also be used to write essays / computer code
+    - they could also hallucinate or generate misinformation
+
+- word embedding bias
+    - static word embeddings can be used to solve analogies
+    - occupations sorted by he/she pronouns
+    - embeddings amplify biases present in language
+
+    - contextual embeddings
+        - gender and racial biases exist in contextual embeddings as well as in sentence embeddings
+        - intersectional biases = biases related to terms or names associated with people who belong to multiple underrepresented groups
+        - intersectional could be > than sum(individual biases)
+
+- debiasing
+    - Bulukbasi discusses a debiasing technique -> pushes biased embeddings closer to the center of 'he' and 'she'
+    - authors show that this can be done in a way to reduce the bias while keeping embeddings useful for certain tasks like solving analogies
+    - certain words like 'grandfather' or 'grandmother' should not be debiased
+        - gender-neutral words should be debiased
+        - gender-specific words shouldn't be debiased
+
+- general
+    - representational harm = harm caused by a system demeaning or even ignoring some social groups
+    - historical embeddings = word embeddings trained on data from the past
+        - can measure biases that were present in previous time periods
+
+- machine translation
+    - biased embeddings can specifically affect modern MT systems
+        - some languages have gender-neutral pronouns which can be translated to a language without them
+        - such systems often default to the male gender or base their decisions on cultural stereotypes
+    - there aren't a lot of large parallel training texts available
+        - many MT approaches focus on the case where one of the languages is english
+
+- measuring bias
+    - how can the degrees of biases of different language models be compared?
+    - researchers created Context Association Tests (CATs)
+        - in one type, predict the best word to fill in a blank given three choices
+        - in another type predict the best follow-up sentence given a sentence again given three choices
+        - for both types, three choices = stereotype, anti-stereotype, and unrelated
+
+- explaining predictions
+    - machine learning in general is used to make predictions and are often considered to be black boxes
+    - may lead to ethical issues when such systems are used to make important decisions like which applicant gets chosen for an interview
+    - general goal to explain decisions made by ML systems
+        - interpretabyle AI = understanding the inner workings of a system
+        - explainable AI = explaining predictions or decisions made by AI systems in human terms
+    - human explanations are often contrastive and may involve back and forth communication
+
+- BERTology
+    - specifically relevant to modern NLP, some researchers have attepmted to understand why BERT makes the predictions that it makes
+    - field of study is sometimes referred to as BERTology
+    - considered to fall in the real of xAI
+
+- Stochastic Parrots
+   - paper that delivers a long list of criticisms of BERT-like language models like:
+        - they're bad for the environment (training a single BERT base model is estimated to use as much energy as a trans-American flight)
+        - massive training data sometimes leads to encoded and amplified biases
+        - slow to adapt to changing social views
+        - cannot communicate back and forth
+        - there is "no actual language understanding" taking place
+- Turing test
+    - potential test for intelligence
+    - a computer/person communicating with an expert located in another room
+    - another human coordinator would be necessary to exchange messages between the agent and the tester
+    - today can imagine the tester communicating with the computer or person over a network
+
+    - humans are intelligent based on our communication with others
+    - if a machine can fool an expert into thinking it is human by passing its test, we should consider it ot be intelligent
+        - if an agent passes the test it should be considered intelligent
+        - turing wanted it to have a sort of fixed time limit
+
+        - "head in the sand objection" = machine thinking would be too dreadful so lets hope they cannot be
+        - "continuity of nervous system" = nervous system is not a discrete machine
+
+- weak and strong AI
+    - weak AI = machines can act intelligently (can be have as if they were intelligent)
+    - strong AI = machines would actually be intelligent and actually be thinking
+        - supporters say there is no distinction between what a computer is capable of and what a brain is capable of
 
